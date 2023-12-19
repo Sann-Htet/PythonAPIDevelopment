@@ -1,1 +1,4 @@
 fastapi-venv
+__pycache__
+venv/
+.env
