@@ -1,5 +1,6 @@
 from fastapi import FastAPI, Response, status, HTTPException, Depends, APIRouter
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from .. import models, schema, oauth2
 from ..database import get_db
 from typing import List, Optional
@@ -9,21 +10,52 @@ router = APIRouter(
     tags=['Posts']
 )
 
-@router.get("/", response_model=List[schema.Post])
+@router.get("/", response_model=List[schema.PostOut])
 def get_posts(db: Session = Depends(get_db), current_user: int = Depends(oauth2.get_current_user), limit: int = 10, skip: int = 0, search: Optional[str] = ""):
     # cursor.execute("""SELECT * FROM posts""")
     # posts = cursor.fetchall()
-    posts = db.query(models.Post).filter(models.Post.title.contains(search)).limit(limit).offset(skip).all()
-    return posts
+    results = db.query(models.Post, func.count(models.Vote.post_id).label("votes")) \
+                .join(models.Vote, models.Vote.post_id == models.Post.id, isouter=True) \
+                .group_by(models.Post.id) \
+                .filter(models.Post.title.contains(search)).limit(limit).offset(skip) \
+                .all()
+    
+    post_out_list = [{
+        "title": post.title,
+        "content": post.content,
+        "published": post.published,
+        "created_at": post.created_at,
+        "owner_id": post.owner_id,
+        "owner": post.owner,
+        "votes": votes
+    } for post, votes in results]
 
-@router.get("/{id}", response_model=schema.Post) # Path parameter
+    return post_out_list
+
+@router.get("/{id}", response_model=schema.PostOut) # Path parameter
 def get_post(id: int, db: Session = Depends(get_db), current_user: int = Depends(oauth2.get_current_user)):
     # cursor.execute("""SELECT * FROM posts WHERE id = %s""", (str(id),))
     # post = cursor.fetchone()
-    post = db.query(models.Post).filter(models.Post.id == id).first()
+    post, vote = db.query(models.Post, func.count(models.Vote.post_id).label("votes")) \
+             .join(models.Vote, models.Vote.post_id == models.Post.id, isouter=True) \
+             .group_by(models.Post.id) \
+             .filter(models.Post.id == id) \
+             .first()
+
+    post_out = {
+        "title": post.title,
+        "content": post.content,
+        "published": post.published,
+        "created_at": post.created_at,
+        "owner_id": post.owner_id,
+        "owner": post.owner,
+        "votes": vote
+    }
+    
     if not post:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"post with id: {id} was not found")
-    return post
+    
+    return post_out
 
 @router.post("/", status_code=status.HTTP_201_CREATED, response_model=schema.Post)
 def create_posts(post: schema.PostCreate, db: Session = Depends(get_db), current_user: int = Depends(oauth2.get_current_user)):

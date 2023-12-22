@@ -27,6 +27,18 @@ class Post(PostBase):
     class Config:
         orm_mode = True
 
+class PostOut(PostBase):
+    title: str
+    content: str
+    published: bool = True
+    created_at: datetime
+    owner_id: int
+    owner: UserOut
+    votes: int
+
+    class Config:
+        orm_mode = True
+
 class UserCreate(BaseModel):
     email: EmailStr
     password: str
