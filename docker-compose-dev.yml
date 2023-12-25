@@ -14,9 +14,8 @@ services:
     
   postgres:
     image: postgres
-    environment:
-      - POSTGRES_PASSWORD=sannhtet899
-      - POSTGRES_DB=fastapi
+    env_file:
+      - /home/sann_htet/Desktop/PythonAPIDevelopment/.env
     volumes:
       - postgres-db:/var/lib/postgresql/data
     
