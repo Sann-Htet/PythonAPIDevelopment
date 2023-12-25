@@ -1,0 +1,14 @@
+[Unit]
+Description=demo fastapi application
+After=network.target
+
+[Service]
+User=sann_htet
+Group=sann_htet
+WorkingDirectory=/home/sann_htet/Desktop/PythonAPIDevelopment
+Environment="PATH=/home/sann_htet/Desktop/PythonAPIDevelopment/fastapi_venv/bin"
+EnvironmentFile=/home/sann_htet/Desktop/PythonAPIDevelopment/.env
+ExecStart=/home/sann_htet/Desktop/PythonAPIDevelopment/fastapi-venv/bin/gunicorn -w 4 -k uvicorn.workers.UvicornWorker app.main:app --bind 0.0.0.0:8000
+
+[Install]
+WantedBy=multi-user.target
